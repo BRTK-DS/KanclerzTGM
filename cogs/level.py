@@ -139,6 +139,25 @@ class level(commands.Cog):
             await ctx.respond(embed=embed)
         else:
             await ctx.respond("Użytkownik nie został znaleziony w bazie.")
+    
+    
+    # Poprawić żeby działało tutaj bo wszystko jest zjebane
+            
+    @discord.slash_command(description="Top 10 na serwerze!")
+    async def leaderboard(ctx):
+        top_users = collection.find().sort("xp", -1).limit(10)
+        embed = discord.Embed(title="🏆 Leaderboard", color=discord.Color.gold())
+
+        position = 1
+        async for user in top_users:
+            embed.add_field(
+                name=f"{position}. {user['username']}", # No tutaj to już w ogóle dojebałem także no
+                value=f"Level: {user['level']} | XP: {user['xp']}",
+                inline=False
+            )
+        position += 1
+
+        await ctx.send(embed=embed)
             
 def setup(bot):
     bot.add_cog(level(bot))
