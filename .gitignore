@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+private.py
+linkdb.py
 
 # C extensions
 *.so
