@@ -5,28 +5,22 @@ import random
 from linkdb import *
 
 mongo_client = MongoClient(link_db)
-db = mongo_client["div_db"]
-collection = db["div_levels"]
+db = mongo_client["tgm_db"]
+collection = db["tgm_levels"]
 
-class level(commands.Cog):
+class Level(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.collection = MongoClient(link_db)["div_db"]["div_levels"]
+        self.collection = collection
         self.cooldown_users = set()
         self.xp_task.start()
 
     def cog_unload(self):
         self.xp_task.cancel()
-        
-    def get_user_info(self, message):
-        # Look for a user id entry
-        user_id = str(message.author.id)
-        
 
     @tasks.loop(seconds=30)
     async def xp_task(self):
-        for user_id in self.cooldown_users.copy():
-            self.cooldown_users.remove(user_id)
+        self.cooldown_users.clear()
 
     @xp_task.before_loop
     async def before_xp_task(self):
@@ -34,66 +28,59 @@ class level(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-
-        # Ignore bot's message, and ignore DMs
-        if message.author.bot:
+        guild_id = 1309556200844689459
+        
+        if user_data["level"] >= 150:
             return
         
+        if message.author.bot or not message.guild or message.guild.id != guild_id:
+            return
+
         user_id = str(message.author.id)
         user_data = self.collection.find_one({"user_id": user_id})
-        
+
         if not user_data:
             user_data = {
                 "user_id": user_id,
+                "username": message.author.name,
                 "level": 1,
                 "xp": 0
             }
             self.collection.insert_one(user_data)
-            
-        xp_gain = random.randint(5,25)
-        new_xp = user_data["xp"] + xp_gain
-        level = user_data["level"]
-        
+
         if user_id in self.cooldown_users:
             return
 
-        # Check if a user has a new level
+        xp_gain = random.randint(5, 25)
+        new_xp = user_data["xp"] + xp_gain
+        level = user_data["level"]
         level_up = False
+
         if new_xp >= level * 100:
             new_xp = 0
             level += 1
             level_up = True
-            
-            if level == 5: 
-                role_id = 123 # Waiting for Role ID
-                role = message.guild.get_role(role_id)
-                await message.author.add_roles(role)
 
-            if level == 15:
-                role_id = 123 # Waiting for Role ID
-                role = message.guild.get_role(role_id)
-                await message.author.add_roles(role)
+            # Przykład: dodaj role przy poziomach
+            role_ids = {
+                5: 111111111111111111,
+                15: 222222222222222222,
+                30: 333333333333333333,
+                50: 444444444444444444,
+            }
+            if level in role_ids:
+                role = message.guild.get_role(role_ids[level])
+                if role:
+                    await message.author.add_roles(role)
 
-            if level == 30:
-                role_id = 123 # Waiting for Role ID
-                role = message.guild.get_role(role_id)
-                await message.author.add_roles(role)
-
-            if level == 50:
-                role_id = 123 # Waiting for Role ID
-                role = message.guild.get_role(role_id)
-                await message.author.add_roles(role)
-            
         self.collection.update_one(
             {"user_id": user_id},
-            {"$set": {"xp": new_xp, "level": level}}
+            {"$set": {"xp": new_xp, "level": level, "username": message.author.name}}
         )
-        
+
         if level_up:
-            await message.channel.send(
-                f"{message.author.mention} Gratulacje! Wbiłeś poziom {level}!"
-            )
-            
+            await message.channel.send(f"{message.author.mention} Gratulacje! Wbiłeś poziom {level}!")
+
         self.cooldown_users.add(user_id)
 
     @discord.slash_command(description="Sprawdź swój poziom na serwerze.")
@@ -108,56 +95,38 @@ class level(commands.Cog):
             xp_needed = level * 100
             progress = xp / xp_needed
 
-            progress_bar = "["
-            filled = int(20 * progress)
-            progress_bar += "█" * filled
-            progress_bar += " " * (20 - filled)
-            progress_bar += f"] {int(progress * 100)}%"
+            progress_bar = "[" + "█" * int(20 * progress) + " " * (20 - int(20 * progress)) + f"] {int(progress * 100)}%"
 
-            xp_emoji = discord.PartialEmoji(
-                animated=True, name="xp", id="1170497037339476018"
-            )
-            level_emoji = discord.PartialEmoji(
-                animated=True, name="lvl", id="1170499855068696717"
-            )
-            progress_emoji = discord.PartialEmoji(
-                animated=True, name="prg", id="1170499275306827826"
-            )
+            xp_emoji = discord.PartialEmoji(animated=True, name="xp", id=1170497037339476018)
+            level_emoji = discord.PartialEmoji(animated=True, name="lvl", id=1170499855068696717)
+            progress_emoji = discord.PartialEmoji(animated=True, name="prg", id=1170499275306827826)
 
             embed = discord.Embed(
                 title=f"Karta postępu użytkownika @{user.display_name}", color=0xA751ED
             )
             embed.add_field(name=f"{level_emoji} Poziom:", value=level, inline=True)
-            embed.add_field(
-                name=f"{xp_emoji} XP:", value=f"{xp}/{xp_needed}", inline=True
-            )
-            embed.add_field(
-                name=f"{progress_emoji} Postęp:", value=progress_bar, inline=False
-            )
+            embed.add_field(name=f"{xp_emoji} XP:", value=f"{xp}/{xp_needed}", inline=True)
+            embed.add_field(name=f"{progress_emoji} Postęp:", value=progress_bar, inline=False)
             embed.set_thumbnail(url=user.display_avatar.url)
 
             await ctx.respond(embed=embed)
         else:
             await ctx.respond("Użytkownik nie został znaleziony w bazie.")
-    
-    
-    # Poprawić żeby działało tutaj bo wszystko jest zjebane
-            
+
     @discord.slash_command(description="Top 10 na serwerze!")
-    async def leaderboard(ctx):
-        top_users = collection.find().sort("xp", -1).limit(10)
+    async def leaderboard(self, ctx):
+        top_users = list(self.collection.find().sort("xp", -1).limit(10))
         embed = discord.Embed(title="🏆 Leaderboard", color=discord.Color.gold())
 
-        position = 1
-        async for user in top_users:
+        for position, user in enumerate(top_users, start=1):
+            name = user.get("username", f"Użytkownik {user['user_id']}")
             embed.add_field(
-                name=f"{position}. {user['username']}", # No tutaj to już w ogóle dojebałem także no
+                name=f"{position}. {name}",
                 value=f"Level: {user['level']} | XP: {user['xp']}",
                 inline=False
             )
-        position += 1
 
-        await ctx.send(embed=embed)
-            
+        await ctx.respond(embed=embed)
+
 def setup(bot):
-    bot.add_cog(level(bot))
+    bot.add_cog(Level(bot))
