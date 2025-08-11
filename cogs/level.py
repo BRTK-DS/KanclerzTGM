@@ -34,8 +34,10 @@ class Level(commands.Cog):
     async def on_message(self, message):
         guild_id = 1309556200844689459
         user_id = str(message.author.id)
+        channel_id = 1367966124460736633
+        channel = self.bot.get_channel(channel_id)
         
-        if message.author.bot or not message.guild or message.guild.id != guild_id:
+        if message.author.bot or not message.guild or message.guild.id != guild_id or channel:
             return
 
         # Pobierz dane lub utwórz nowy wpis
