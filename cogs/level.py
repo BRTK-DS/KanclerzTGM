@@ -110,7 +110,7 @@ class Level(commands.Cog):
         user_id = str(user.id)
         user_data = self.collection.find_one({"user_id": user_id})
         
-        xp_emoji = discord.PartialEmoji(animated=True, name="xp_orb", id=1404378885503848489)
+        xp_emoji = discord.PartialEmoji(animated=True, name="xp_orb", id=1404463975130730596)
 
         if user_data is not None:
             level = user_data["level"]
