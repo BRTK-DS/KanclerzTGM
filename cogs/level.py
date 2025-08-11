@@ -34,11 +34,12 @@ class Level(commands.Cog):
     async def on_message(self, message):
         guild_id = 1309556200844689459
         user_id = str(message.author.id)
-        user_data = self.collection.find_one({"user_id": user_id})
         
         if message.author.bot or not message.guild or message.guild.id != guild_id:
             return
 
+        # Pobierz dane lub utwórz nowy wpis
+        user_data = self.collection.find_one({"user_id": user_id})
         if not user_data:
             user_data = {
                 "user_id": user_id,
@@ -47,50 +48,58 @@ class Level(commands.Cog):
                 "xp": 0
             }
             self.collection.insert_one(user_data)
-            
+
+        # Limit poziomu
         if user_data["level"] >= 150:
             return
 
+        # Cooldown
         if user_id in self.cooldown_users:
             return
 
+        # Dodaj XP
         xp_gain = random.randint(5, 25)
         new_xp = user_data["xp"] + xp_gain
         level = user_data["level"]
         level_up = False
 
-        if new_xp >= xp_needed_for_level(level):
-            new_xp = 0
+        # Sprawdź awans na poziom (może być kilka naraz)
+        role_ids = {
+            10: 1366072867061629038,
+            30: 1367969910264824029,
+            50: 1387524614955208878,
+            70: 1387524678251446272,
+            100: 1387524704235028671,
+            150: 1387524928470782022,
+        }
+
+        while new_xp >= xp_needed_for_level(level):
+            new_xp -= xp_needed_for_level(level)  # zachowaj nadwyżkę
             level += 1
             level_up = True
 
-            # Przykład: dodaj role przy poziomach
-            role_ids = {
-                10: 1366072867061629038,
-                30: 1367969910264824029,
-                50: 1387524614955208878,
-                70: 1387524678251446272,
-                100: 1387524704235028671,
-                150: 1387524928470782022,
-            }
+            # Nadanie roli
             if level in role_ids:
                 role = message.guild.get_role(role_ids[level])
                 if role:
                     await message.author.add_roles(role)
 
+        # Zapisz do bazy
         self.collection.update_one(
             {"user_id": user_id},
             {"$set": {"xp": new_xp, "level": level, "username": message.author.name}}
         )
 
+        # Komunikaty
         if level_up:
             await message.channel.send(f"{message.author.mention} Gratulacje! Wbiłeś poziom {level}!")
-        if level_up and level in role_ids:
-            await message.channel.send(
-    f"{message.author.mention} Gratulacje! Wbiłeś poziom {level} i otrzymałeś rangę {role.mention}",
-    allowed_mentions=discord.AllowedMentions(roles=False, users=True)
-)
+            if level in role_ids and (role := message.guild.get_role(role_ids[level])):
+                await message.channel.send(
+                    f"{message.author.mention} Otrzymałeś rangę {role.mention}!",
+                    allowed_mentions=discord.AllowedMentions(roles=False, users=True)
+                )
 
+        # Dodaj do cooldowna
         self.cooldown_users.add(user_id)
 
     @discord.slash_command(description="Sprawdź swój poziom na serwerze.")
@@ -99,7 +108,7 @@ class Level(commands.Cog):
         user_id = str(user.id)
         user_data = self.collection.find_one({"user_id": user_id})
         
-        xp_emoji = discord.PartialEmoji(animated=True, name="xp_orb", id="1404378885503848489")
+        xp_emoji = discord.PartialEmoji(animated=True, name="xp_orb", id=1404378885503848489)
 
         if user_data is not None:
             level = user_data["level"]
