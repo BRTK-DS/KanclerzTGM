@@ -37,7 +37,7 @@ class LevelAdmin(commands.Cog):
             {"user_id": str(user.id)},
             {"$set": {"xp": new_xp, "username": user.name}}
         )
-        await ctx.respond(f"✅ Dodano {xp} XP dla {user.mention}. Teraz ma {new_xp} XP.")
+        await ctx.respond(f"✅ Dodano {xp} XP dla {user.mention}. Teraz ma {new_xp} XP.", ephemeral=True)
 
     @discord.slash_command(description="Ustaw konkretną ilość XP.")
     @discord.default_permissions(administrator=True)
@@ -47,7 +47,7 @@ class LevelAdmin(commands.Cog):
             {"user_id": str(user.id)},
             {"$set": {"xp": xp, "username": user.name}}
         )
-        await ctx.respond(f"✅ Ustawiono {xp} XP dla {user.mention}.")
+        await ctx.respond(f"✅ Ustawiono {xp} XP dla {user.mention}.", ephemeral=True)
 
     @discord.slash_command(description="Ustaw konkretny poziom.")
     @discord.default_permissions(administrator=True)
@@ -57,7 +57,7 @@ class LevelAdmin(commands.Cog):
             {"user_id": str(user.id)},
             {"$set": {"level": level, "username": user.name}}
         )
-        await ctx.respond(f"✅ Ustawiono poziom {level} dla {user.mention}.")
+        await ctx.respond(f"✅ Ustawiono poziom {level} dla {user.mention}.", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(LevelAdmin(bot))
