@@ -2,11 +2,13 @@ import discord
 from discord import guild_only, PermissionOverwrite, Interaction
 from discord.ext import commands
 
-from private import moderator_role_ids, ticket_category_id
+from private import ticket_category_id
+from permissioncontroller import PermissionController, ModuleName
 
 class TicketModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, moderator_roles: PermissionController):
         super().__init__(title="Utwórz ticket")
+        self.moderator_roles = moderator_roles
         self.add_item(discord.ui.InputText(label="Proszę, opisz krótko swój problem", placeholder="Wpisz tutaj"))
 
 
@@ -15,6 +17,7 @@ class TicketModal(discord.ui.Modal):
         member = interaction.user
         overwrites = {interaction.guild.default_role: PermissionOverwrite(view_channel=False, send_messages=True),
                       member: PermissionOverwrite(view_channel=True)}
+        moderator_role_ids = self.moderator_roles.get_roles_with_permission(ModuleName.MODERATOR)
         for role_id in moderator_role_ids:
             role = interaction.guild.get_role(role_id)
             if role:
@@ -36,14 +39,15 @@ class TicketModal(discord.ui.Modal):
 
 
 class CreateTicketView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, moderator_roles: PermissionController):
         super().__init__(timeout=None)
+        self.moderator_roles = moderator_roles
     
     @discord.ui.button(label="Utwórz ticket", style=discord.ButtonStyle.green, custom_id="create_ticket_button")
     async def button_callback(self, button, interaction: Interaction):
         # TODO: system sprawdzania czy ten użytkownik nie posiada już ticketa
         # Zgodnie zwymaganiami, na jednego użytkownika ma przypadać na raz tylko jeden ticket
-        await interaction.response.send_modal(TicketModal())
+        await interaction.response.send_modal(TicketModal(self.moderator_roles))
 
 class TicketControlModal(discord.ui.Modal):
     def __init__(self, cog):
@@ -65,6 +69,7 @@ class CloseTicketView(discord.ui.View):
     def __init__(self, cog):
         super().__init__(timeout=None)
         self.cog = cog
+        self.moderator_roles = PermissionController()
 
     @discord.ui.button(label="Zamknij ticket", style=discord.ButtonStyle.red, custom_id="close_ticket_button")
     async def close_ticket_button(self, button, interaction: discord.Interaction):
@@ -80,10 +85,11 @@ class CloseTicketView(discord.ui.View):
 class TicketAdmin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.moderator_roles = PermissionController()
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.bot.add_view(CreateTicketView())
+        self.bot.add_view(CreateTicketView(self.moderator_roles))
         self.bot.add_view(CloseTicketView(self))
 
     async def _is_ticket_channel(self, channel):
@@ -94,10 +100,10 @@ class TicketAdmin(commands.Cog):
         return None
 
     async def _do_close_ticket(self, channel, author, reason = None):
-        is_ticket_channel_result = await self._is_ticket_channel(channel)
+        is_ticket_channel = await self._is_ticket_channel(channel)
 
-        if is_ticket_channel_result is not None:
-            return is_ticket_channel_result
+        if is_ticket_channel is not None:
+            return is_ticket_channel
 
         await channel.delete(reason=f"Closing ticket by {author}")
         # TODO: Loguj usunięte tickety na kanale mod-log
@@ -114,7 +120,7 @@ class TicketAdmin(commands.Cog):
     @guild_only()
     async def create_ticket_menu(self, ctx, channel: discord.TextChannel):
         embed = discord.Embed(title="Utwórz ticket", color=0xA751ED, description="Utwórz ticket, aby zadać pytanie, zgłosić błąd lub uzyskać pomoc innego typu")
-        await channel.send(embed=embed, view=CreateTicketView())
+        await channel.send(embed=embed, view=CreateTicketView(self.moderator_roles))
         await ctx.respond(f"✅ Utworzone nowe menu na kanale <#{channel.id}>.", ephemeral=True)
 
     @discord.slash_command(description="Dodaje użytkownika do ticketa.")
@@ -133,12 +139,13 @@ class TicketAdmin(commands.Cog):
 
     @discord.slash_command(description="Tworzy menu umożliwiające zamknięcie ticketa przez moderatorów")
     @guild_only()
-    async def close_ticket(self, ctx):
+    async def close_request(self, ctx):
         channel = ctx.channel
-        is_ticket_channel_result = await self._is_ticket_channel(channel)
+        is_ticket_channel = await self._is_ticket_channel(channel)
 
-        if is_ticket_channel_result is not None:
-            ctx.respond(is_ticket_channel_result, ephemeral=True)
+        if is_ticket_channel is not None:
+            await ctx.respond(is_ticket_channel, ephemeral=True)
+            return
 
         embed = discord.Embed(title="Kontrola ticketa", color=0xff9900, description="Kliknij w przycisk poniżej, aby zamknąć ticket")
         await ctx.send(embed=embed, view=CloseTicketView(self))
@@ -155,6 +162,38 @@ class TicketAdmin(commands.Cog):
 
         if result is not None:
             ctx.respond(result, ephemeral=True)
+
+    @discord.slash_command(description="Blokuje ticket")
+    @discord.default_permissions(administrator=True)
+    @guild_only()
+    async def block(self, ctx):
+        channel = ctx.channel
+        is_ticket_channel = await self._is_ticket_channel(channel)
+
+        if is_ticket_channel is not None:
+            await ctx.respond(is_ticket_channel, ephemeral=True)
+            return
+
+        await channel.set_permissions(ctx.guild.default_role, view_channel=False, send_messages=False)
+        # TODO: Loguj zablokowanie ticketa na kanale mod-log
+        await ctx.respond("🔒 Pomyślnie zablokowano kanał", ephemeral=False)
+
+    @discord.slash_command(description="Odblokowywuje ticket")
+    @discord.default_permissions(administrator=True)
+    @guild_only()
+    async def unlock(self, ctx):
+        channel = ctx.channel
+        is_ticket_channel = await self._is_ticket_channel(channel)
+
+        if is_ticket_channel is not None:
+            await ctx.respond(is_ticket_channel, ephemeral=True)
+            return
+
+        await channel.set_permissions(ctx.guild.default_role, view_channel=False, send_messages=True)
+        # TODO: Loguj zablokowanie ticketa na kanale mod-log
+        await ctx.respond("🔓 Pomyślnie odblokowano kanał", ephemeral=False)
+
+
 
 
 
