@@ -2,10 +2,12 @@ import json
 from pathlib import Path
 from enum import Enum
 
+
 class ModuleName(Enum):
     MODERATOR = "moderator"
     ECONOMY = "ekonomia"
     LEVEL = "poziomy"
+
 
 class PermissionController:
     def __init__(self, filepath="module_roles.json"):
@@ -24,6 +26,7 @@ class PermissionController:
         return roles_map
 
     """Zapisuje roles_map do pliku"""
+
     def _save(self, data=None):
         if data is None:
             data = self.roles_map
@@ -34,6 +37,7 @@ class PermissionController:
             json.dump(serializable_data, f, indent=4)
 
     """Zwraca listę role_id, które mają dane uprawnienie (enum)"""
+
     def get_roles_with_permission(self, module: ModuleName) -> list[int]:
         result = []
         for role_id, perms in self.roles_map.items():
@@ -42,6 +46,7 @@ class PermissionController:
         return result
 
     """Dodaje uprawnienie dla roli"""
+
     def add_role_permission(self, role_id: str, module: ModuleName):
         role_id = str(role_id)
         if role_id not in self.roles_map:
@@ -51,6 +56,7 @@ class PermissionController:
         self._save()
 
     """Usuwa uprawnienie z roli"""
+
     def remove_role_permission(self, role_id: str, module: ModuleName):
         role_id = str(role_id)
         if role_id in self.roles_map and module in self.roles_map[role_id]:
@@ -60,10 +66,12 @@ class PermissionController:
             self._save()
 
     """Sprawdza, czy dana rola ma uprawnienie"""
+
     def has_permission(self, role_id: str, module: ModuleName) -> bool:
         role_id = str(role_id)
         return module in self.roles_map.get(role_id, [])
 
     """Zwraca listę wszystkich role_id"""
+
     def all_roles(self) -> list[int]:
         return [int(role_id) for role_id in self.roles_map.keys()]

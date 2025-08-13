@@ -9,9 +9,11 @@ mongo_client = MongoClient(link_db)
 db = mongo_client["tgm_db"]
 collection = db["tgm_levels"]
 
+
 # Funkcja licząca wymagane XP na dany poziom
 def xp_needed_for_level(level, base_xp=1000, increase=500):
     return base_xp + increase * (level - 1)
+
 
 class Level(commands.Cog):
     def __init__(self, bot):
@@ -33,9 +35,9 @@ class Level(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        #guild_id = 1309556200844689459
+        # guild_id = 1309556200844689459
         user_id = str(message.author.id)
-        
+
         if message.author.bot or not message.guild or message.guild.id != guild_id:
             return
 
@@ -46,7 +48,7 @@ class Level(commands.Cog):
                 "user_id": user_id,
                 "username": message.author.name,
                 "level": 1,
-                "xp": 0
+                "xp": 0,
             }
             self.collection.insert_one(user_data)
 
@@ -88,16 +90,18 @@ class Level(commands.Cog):
         # Zapisz do bazy
         self.collection.update_one(
             {"user_id": user_id},
-            {"$set": {"xp": new_xp, "level": level, "username": message.author.name}}
+            {"$set": {"xp": new_xp, "level": level, "username": message.author.name}},
         )
 
         # Komunikaty
         if level_up:
-            await message.channel.send(f"{message.author.mention} Gratulacje! Wbiłeś poziom {level}!")
+            await message.channel.send(
+                f"{message.author.mention} Gratulacje! Wbiłeś poziom {level}!"
+            )
             if level in role_ids and (role := message.guild.get_role(role_ids[level])):
                 await message.channel.send(
                     f"{message.author.mention} Otrzymałeś rangę {role.mention}!",
-                    allowed_mentions=discord.AllowedMentions(roles=False, users=True)
+                    allowed_mentions=discord.AllowedMentions(roles=False, users=True),
                 )
 
         # Dodaj do cooldowna
@@ -108,8 +112,10 @@ class Level(commands.Cog):
         user = user or ctx.author
         user_id = str(user.id)
         user_data = self.collection.find_one({"user_id": user_id})
-        
-        xp_emoji = discord.PartialEmoji(animated=True, name="xp_orb", id=1404378885503848489)
+
+        xp_emoji = discord.PartialEmoji(
+            animated=True, name="xp_orb", id=1404378885503848489
+        )
 
         if user_data is not None:
             level = user_data["level"]
@@ -117,14 +123,25 @@ class Level(commands.Cog):
             xp_needed = xp_needed_for_level(level)
             progress = xp / xp_needed
 
-            progress_bar = "[" + "█" * int(20 * progress) + " " * (20 - int(20 * progress)) + f"] {int(progress * 100)}%"
+            progress_bar = (
+                "["
+                + "█" * int(20 * progress)
+                + " " * (20 - int(20 * progress))
+                + f"] {int(progress * 100)}%"
+            )
 
             embed = discord.Embed(
                 title=f"Karta postępu użytkownika @{user.display_name}", color=0xA751ED
             )
             embed.add_field(name=f":bar_chart: Poziom:", value=level, inline=True)
-            embed.add_field(name=f"{xp_emoji} XP:", value=f"{xp}/{xp_needed}", inline=True)
-            embed.add_field(name=f":chart_with_upwards_trend: Postęp:", value=progress_bar, inline=False)
+            embed.add_field(
+                name=f"{xp_emoji} XP:", value=f"{xp}/{xp_needed}", inline=True
+            )
+            embed.add_field(
+                name=f":chart_with_upwards_trend: Postęp:",
+                value=progress_bar,
+                inline=False,
+            )
             embed.set_thumbnail(url=user.display_avatar.url)
 
             await ctx.respond(embed=embed)
@@ -145,10 +162,11 @@ class Level(commands.Cog):
             embed.add_field(
                 name=f"#{position} — {name}",
                 value=f"**Poziom:** {level} | **XP:** {xp}",
-                inline=False
+                inline=False,
             )
 
         await ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Level(bot))
