@@ -3,6 +3,7 @@ from discord.ext import tasks, commands
 from pymongo import MongoClient
 import random
 from linkdb import *
+from private import guild_id
 
 mongo_client = MongoClient(link_db)
 db = mongo_client["tgm_db"]
@@ -32,7 +33,7 @@ class Level(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        guild_id = 1309556200844689459
+        #guild_id = 1309556200844689459
         user_id = str(message.author.id)
         channel_id = 1367966124460736633
         
