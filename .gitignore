@@ -1,9 +1,13 @@
+# User-specific stuff
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 private.py
 linkdb.py
+module_roles.json
 
 # C extensions
 *.so
