@@ -9,7 +9,7 @@ class TicketModal(discord.ui.Modal):
     def __init__(self, moderator_roles: PermissionController):
         super().__init__(title="Utwórz ticket")
         self.moderator_roles = moderator_roles
-        self.add_item(discord.ui.InputText(label="Proszę, opisz krótko swój problem", placeholder="Wpisz tutaj"))
+        self.add_item(discord.ui.InputText(label="Proszę, opisz krótko swój problem", placeholder="Wpisz tutaj", style=discord.InputTextStyle.long))
 
 
     async def callback(self, interaction: Interaction):
@@ -46,7 +46,6 @@ class CreateTicketView(discord.ui.View):
     @discord.ui.button(label="Utwórz ticket", style=discord.ButtonStyle.green, custom_id="create_ticket_button")
     async def button_callback(self, button, interaction: Interaction):
         # TODO: system sprawdzania czy ten użytkownik nie posiada już ticketa
-        # Zgodnie zwymaganiami, na jednego użytkownika ma przypadać na raz tylko jeden ticket
         await interaction.response.send_modal(TicketModal(self.moderator_roles))
 
 class TicketControlModal(discord.ui.Modal):
