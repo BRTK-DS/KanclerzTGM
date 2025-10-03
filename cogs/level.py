@@ -9,7 +9,7 @@ db = mongo_client["tgm_db"]
 collection = db["tgm_levels"]
 
 # Funkcja licząca wymagane XP na dany poziom
-def xp_needed_for_level(level, base_xp=1000, increase=500):
+def xp_needed_for_level(level, base_xp=500, increase=100):
     return base_xp + increase * (level - 1)
 
 class Level(commands.Cog):
