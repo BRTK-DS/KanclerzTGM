@@ -6,7 +6,7 @@ from enum import Enum
 from permissioncontroller import ModuleName
 
 
-class TicketAction(Enum):
+class Action(Enum):
     ADD = "Add"
     REMOVE = "Remove"
 
@@ -24,11 +24,11 @@ class RoleAdmin(commands.Cog):
     async def modrole(
         self,
         ctx,
-        action: discord.Option(TicketAction),
+        action: discord.Option(Action),
         role: discord.Role,
         module: discord.Option(ModuleName),
     ):
-        if action == TicketAction.ADD:
+        if action == Action.ADD:
             self.moderator_roles.add_role_permission(str(role.id), module)
             await ctx.respond(
                 f"Rola {role.name} otrzymała dostęp do modułu {module.value}",
