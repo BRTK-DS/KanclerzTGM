@@ -1,16 +1,10 @@
 import discord
 from discord.ext import commands
-from pymongo import MongoClient
-from linkdb import *
-
-mongo_client = MongoClient(link_db)
-db = mongo_client["tgm_db"]
-collection = db["tgm_levels"]
 
 class LevelAdmin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.collection = MongoClient(link_db)["tgm_db"]["tgm_levels"]
+        self.collection = bot.db["tgm_levels"]
 
     def _get_user_data(self, user_id: str):
         return self.collection.find_one({"user_id": user_id})

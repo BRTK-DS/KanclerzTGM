@@ -1,12 +1,6 @@
 import discord
 from discord.ext import tasks, commands
-from pymongo import MongoClient
 import random
-from linkdb import *
-
-mongo_client = MongoClient(link_db)
-db = mongo_client["tgm_db"]
-collection = db["tgm_levels"]
 
 # Funkcja licząca wymagane XP na dany poziom
 def xp_needed_for_level(level, base_xp=500, increase=100):
@@ -15,7 +9,7 @@ def xp_needed_for_level(level, base_xp=500, increase=100):
 class Level(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.collection = MongoClient(link_db)["tgm_db"]["tgm_levels"]
+        self.collection = bot.db["tgm_levels"]
         self.cooldown_users = set()
         self.xp_task.start()
 
